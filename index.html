@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>糖链 · 器官分布关联建模</title>
+<style>
+  :root {
+    --bg: #0b0f1a; --bg2: #111828; --card: #161f33; --card2: #1c2740;
+    --line: #263149; --line2: #303d5a;
+    --text: #e8ecf4; --muted: #8a95ab; --dim: #5a6staple;
+    --dim: #5a677f;
+    --accent: #5b9dff; --accent2: #7c5cff;
+    --green: #34d399; --gold: #fbbf24; --teal: #2dd4bf; --red: #f87171;
+    --radius: 14px; --radius-sm: 9px;
+    --shadow: 0 6px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Microsoft YaHei", -apple-system, "PingFang SC", sans-serif;
+    background: radial-gradient(1200px 600px at 50% -10%, #16203a 0%, var(--bg) 55%);
+    color: var(--text); max-width: 940px; margin: 0 auto; padding: 30px 22px 70px;
+    line-height: 1.5;
+  }
+  h1 { font-size: 23px; font-weight: 700; letter-spacing: .3px; margin-bottom: 4px;
+    background: linear-gradient(90deg, #fff, #9db8ff); -webkit-background-clip: text;
+    background-clip: text; -webkit-text-fill-color: transparent; }
+  .lead { color: var(--muted); font-size: 13px; margin-bottom: 22px; }
+  h2 { font-size: 15px; font-weight: 600; margin: 24px 0 12px; color: #c7d2e8;
+    display: flex; align-items: center; gap: 8px; }
+  h2::before { content: ""; width: 4px; height: 15px; border-radius: 2px;
+    background: linear-gradient(180deg, var(--accent), var(--accent2)); }
+  .sub { color: var(--muted); font-size: 12.5px; margin-bottom: 14px; }
+
+  /* tabs */
+  .tabs { display: flex; gap: 4px; background: var(--bg2); padding: 5px;
+    border-radius: var(--radius); border: 1px solid var(--line); margin-bottom: 22px;
+    flex-wrap: wrap; }
+  .tab { padding: 9px 15px; cursor: pointer; font-size: 13.5px; color: var(--muted);
+    border-radius: var(--radius-sm); transition: all .18s; display: flex; align-items: center; gap: 5px; }
+  .tab:hover { color: var(--text); background: rgba(255,255,255,.04); }
+  .tab.active { color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent2));
+    box-shadow: 0 4px 14px rgba(91,157,255,.35); }
+  .step { font-size: 10px; font-weight: 700; opacity: .8; }
+  .panel { display: none; animation: fade .25s ease; }
+  .panel.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* cards */
+  .card { background: linear-gradient(180deg, var(--card), var(--bg2));
+    border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px 18px; margin-top: 14px; box-shadow: var(--shadow); }
+  .row { padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px;
+    display: flex; align-items: center; gap: 8px; }
+  .row:first-child { border-top: none; }
+  .row .grow { flex: 1; }
+
+  /* controls */
+  .controls { display: flex; gap: 10px; align-items: center; margin: 12px 0; flex-wrap: wrap; }
+  .controls label, .conj-bar label { font-size: 13px; color: var(--muted); }
+  select, button, input {
+    padding: 9px 13px; font-size: 14px; border-radius: var(--radius-sm);
+    border: 1px solid var(--line2); background: var(--card2); color: var(--text);
+    transition: border-color .15s, box-shadow .15s; }
+  select:hover, input:hover { border-color: #3e4d70; }
+  input:focus, select:focus { outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(91,157,255,.15); }
+  input[type=color] { padding: 3px; width: 48px; height: 40px; cursor: pointer; }
+  input[type=number] { width: 78px; }
+  button { cursor: pointer; font-weight: 500; }
+  button:hover { filter: brightness(1.08); }
+  button:active { transform: translateY(1px); }
+  button.primary { background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; border: none; box-shadow: 0 3px 12px rgba(91,157,255,.3); }
+  button.big { padding: 12px 24px; font-size: 15px; }
+  button.ghost { background: transparent; border: 1px solid var(--line2); color: var(--muted); }
+  button.ghost:hover { color: var(--text); border-color: var(--accent); }
+  button.danger { background: rgba(248,113,113,.12); color: #fca5a5; border: 1px solid rgba(248,113,113,.3); }
+
+  .conj-bar { background: linear-gradient(180deg, var(--card), var(--bg2));
+    border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 18px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; box-shadow: var(--shadow); }
+
+  /* palette */
+  .palette { display: flex; flex-wrap: wrap; gap: 9px; }
+  .mono { display: flex; align-items: center; gap: 8px; padding: 9px 13px;
+    border-radius: var(--radius-sm); cursor: pointer; background: var(--card2);
+    border: 1px solid var(--line2); font-size: 14px; transition: all .15s; }
+  .mono:hover { border-color: var(--accent); transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,.3); }
+  .shape { width: 17px; height: 17px; border-radius: 50%; flex: none;
+    box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.25); }
+  .mono small { color: var(--muted); }
+
+  /* chain */
+  #chain { min-height: 78px; background: var(--bg2);
+    border: 1px dashed var(--line2); border-radius: var(--radius); padding: 18px;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+  .seg { display: flex; align-items: center; gap: 3px; }
+  .bead { min-width: 36px; height: 36px; padding: 0 7px; border-radius: 18px;
+    display: flex; align-items: center; justify-content: center; font-size: 11px;
+    color: #08101f; font-weight: 700; cursor: pointer; position: relative;
+    box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.2), 0 2px 6px rgba(0,0,0,.3); }
+  .bead.small { min-width: 26px; height: 26px; font-size: 9px; }
+  .bead.cta { background: linear-gradient(135deg, var(--accent2), #9d7bff);
+    color: #fff; border-radius: 8px; cursor: default; min-width: 44px; }
+  .bead:not(.cta):hover::after { content: "✕"; position: absolute; top: -7px; right: -7px;
+    background: var(--red); color: #fff; border-radius: 50%; width: 17px; height: 17px;
+    font-size: 10px; line-height: 17px; text-align: center; }
+  .xN { font-size: 12px; color: #fff; background: var(--line2); border-radius: 10px;
+    padding: 2px 8px; margin-left: 3px; }
+  .link { color: var(--muted); font-size: 13px; padding: 0 3px; }
+  .placeholder { color: var(--dim); font-size: 13px; }
+
+  /* misc text */
+  .glyco { font-size: 12px; color: var(--muted); display: block; margin-top: 3px; }
+  .mono-code { font-family: "SF Mono", Consolas, monospace; color: #8fbaff;
+    background: rgba(91,157,255,.08); padding: 2px 7px; border-radius: 5px; font-size: 13px; }
+  .badge { font-size: 11.5px; padding: 3px 9px; border-radius: 6px; color: #fff;
+    white-space: nowrap; font-weight: 500; }
+  .b-protein { background: linear-gradient(135deg, #4e8ef7, #5b9dff); }
+  .b-cell { background: linear-gradient(135deg, #22b8a4, #2dd4bf); }
+  .b-conj { background: linear-gradient(135deg, #7c5cff, #9d7bff); }
+  .hit { color: var(--gold); font-weight: 600; }
+  .empty { color: var(--muted); }
+  .score { color: var(--green); font-weight: 700; }
+  .del { color: #fca5a5; cursor: pointer; font-size: 13px; background: none;
+    border: none; padding: 4px 8px; border-radius: 6px; }
+  .del:hover { background: rgba(248,113,113,.12); }
+
+  .add-row { display: flex; gap: 9px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .add-row input[type=text] { flex: 1; min-width: 150px; }
+
+  .rule-form { display: grid; grid-template-columns: 92px 1fr; gap: 10px 14px; align-items: center; }
+  .rule-form label { font-size: 13px; color: #a9b4cc; }
+  .organ-grid { display: flex; gap: 9px; flex-wrap: wrap; }
+  .organ-grid .og { display: flex; align-items: center; gap: 5px; background: var(--card2);
+    padding: 4px 8px 4px 11px; border-radius: var(--radius-sm); border: 1px solid var(--line2); }
+  .organ-grid .og span { font-size: 13px; color: #a9b4cc; font-weight: 600; }
+  .organ-grid input { width: 62px; border: none; background: transparent; padding: 6px 4px; }
+  .organ-grid input:focus { box-shadow: none; }
+
+  /* bars */
+  .bar-wrap { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+  .bar-name { width: 42px; font-size: 14px; font-weight: 600; }
+  .bar-track { flex: 1; background: var(--bg); border-radius: 8px; height: 24px;
+    overflow: hidden; border: 1px solid var(--line); }
+  .bar-fill { height: 100%; border-radius: 7px; transition: width .5s cubic-bezier(.3,1,.4,1);
+    box-shadow: inset 0 0 8px rgba(255,255,255,.15); }
+  .bar-val { width: 64px; text-align: right; font-size: 13px; color: var(--green);
+    font-family: monospace; font-weight: 600; }
+
+  /* formula */
+  .formula { background: var(--bg); border: 1px solid var(--line);
+    border-radius: var(--radius-sm); padding: 14px 16px; font-size: 13px;
+    line-height: 2; color: #b4bfd6; }
+  .formula code { background: rgba(52,211,153,.1); color: var(--green);
+    padding: 2px 7px; border-radius: 5px; font-family: monospace; }
+  .formula b { color: #dbe4f5; }
+
+  /* charts */
+  .chart-flex { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
+  .chart-flex svg { filter: drop-shadow(0 4px 12px rgba(0,0,0,.35)); }
+  .legend { display: flex; flex-direction: column; gap: 7px; min-width: 190px; }
+  .legend .li { display: flex; align-items: center; gap: 9px; font-size: 13px; }
+  .legend .sw { width: 14px; height: 14px; border-radius: 4px; flex: none; }
+  .legend .lp { color: var(--green); font-family: monospace; margin-left: auto; font-weight: 600; }
+
+  .divider { border-top: 1px solid var(--line); padding: 14px 0 0; margin-top: 10px; }
+  .tag-hint { font-size: 12px; color: var(--muted); background: var(--bg);
+    padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--line);
+    margin-top: 8px; }
+</style>
+</head>
+<body>
+  <h1>糖链 · 器官分布关联建模</h1>
+  <div class="lead">流程：① 录入关联规则（可 CSV 批量导入）→ ② 分析各因素权重 → ③ 输入新糖链预测器官分布。「方案建议」页可按目标分布反向推荐配方。数据保存在本地浏览器。</div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="rule"><span class="step">①</span>关联规则</div>
+    <div class="tab" data-tab="sugar">糖库</div>
+    <div class="tab" data-tab="protein">蛋白库</div>
+    <div class="tab" data-tab="cell">细胞库</div>
+    <div class="tab" data-tab="weight"><span class="step">②</span>权重分析</div>
+    <div class="tab" data-tab="predict"><span class="step">③</span>模型预测</div>
+    <div class="tab" data-tab="suggest">方案建议</div>
+  </div>
+
+  <!-- ① 关联规则 -->
+  <div class="panel active" id="panel-rule">
+    <h2>录入关联规则（因素组合 → 器官分布）</h2>
+    <div class="sub">每条：糖种类 / 糖数量 / 连接方式 / 蛋白种类 / 细胞种类，及心肝脾肺肾脑数值。因素可选"任意 / 无特定"作通配。建议 10 组以上。</div>
+    <div class="card">
+      <div class="rule-form">
+        <label>糖种类</label><select id="r-sugar"></select>
+        <label>糖数量</label><input type="number" id="r-count" value="5" min="0" max="999" style="width:120px" />
+        <label>连接方式</label>
+        <select id="r-mode">
+          <option value="任意">任意</option>
+          <option value="氨基">蛋白-氨基-CTA</option>
+          <option value="糖链">蛋白-糖链-CTA</option>
+        </select>
+        <label>蛋白种类</label><select id="r-protein"></select>
+        <label>细胞种类</label><select id="r-cell"></select>
+        <label>器官分布</label><div class="organ-grid" id="r-organs"></div>
+      </div>
+      <div style="margin-top:14px"><button class="primary" onclick="addRule()">添加规则</button></div>
+    </div>
+
+    <h2>批量导入 / 导出</h2>
+    <div class="card">
+      <div class="controls">
+        <button class="primary" onclick="downloadTemplate()">下载 CSV 模板</button>
+        <button class="ghost" onclick="document.getElementById('csv-file').click()">导入 CSV</button>
+        <input type="file" id="csv-file" accept=".csv,.txt" style="display:none" onchange="importCSV(this)" />
+        <button class="ghost" onclick="exportCSV()">导出当前规则</button>
+        <label style="margin-left:8px"><input type="checkbox" id="csv-replace" style="width:auto" /> 导入时清空原有规则</label>
+      </div>
+      <div class="tag-hint">
+        列顺序：糖种类, 糖数量, 连接方式, 蛋白种类, 细胞种类, 心, 肝, 脾, 肺, 肾, 脑。
+        连接方式填 氨基 / 糖链 / 任意。Excel 编辑后「另存为 CSV UTF-8」再导入。
+      </div>
+      <div id="csv-msg"></div>
+    </div>
+
+    <h2>已录入规则（<span id="rule-count">0</span> 组）</h2>
+    <div id="rule-list"></div>
+  </div>
+
+  <!-- 糖库 -->
+  <div class="panel" id="panel-sugar">
+    <h2>糖库</h2>
+    <div class="sub">名称必填，缩写用于序列显示，颜色用于串珠图。</div>
+    <div class="add-row">
+      <input type="text" id="sugar-name" placeholder="名称，比如 葡萄糖" style="max-width:180px" />
+      <input type="text" id="sugar-code" placeholder="缩写，比如 Glc" style="max-width:130px" />
+      <input type="color" id="sugar-color" value="#5b9dff" />
+      <button class="primary" onclick="addSugar()">添加</button>
+    </div>
+    <div id="sugar-list"></div>
+  </div>
+
+  <!-- 蛋白库 -->
+  <div class="panel" id="panel-protein">
+    <h2>蛋白库（常见糖蛋白）</h2>
+    <div class="add-row">
+      <input type="text" id="protein-name" placeholder="蛋白名称，比如 转铁蛋白" style="max-width:200px" />
+      <input type="text" id="protein-glycan" placeholder="表面丰富的糖链（可选）" />
+      <button class="primary" onclick="addEntry('protein')">添加</button>
+    </div>
+    <div id="protein-list"></div>
+  </div>
+
+  <!-- 细胞库 -->
+  <div class="panel" id="panel-cell">
+    <h2>细胞库（常用细胞）</h2>
+    <div class="add-row">
+      <input type="text" id="cell-name" placeholder="细胞名称，比如 HeLa" style="max-width:200px" />
+      <input type="text" id="cell-glycan" placeholder="表面丰富的糖链（可选）" />
+      <button class="primary" onclick="addEntry('cell')">添加</button>
+    </div>
+    <div id="cell-list"></div>
+  </div>
+
+  <!-- ② 权重分析 -->
+  <div class="panel" id="panel-weight">
+    <h2>从规则数据分析各因素权重</h2>
+    <div class="controls"><button class="primary big" onclick="runWeightAnalysis()">开始分析权重</button></div>
+    <div id="weight-result"></div>
+  </div>
+
+  <!-- ③ 模型预测 -->
+  <div class="panel" id="panel-predict">
+    <div class="conj-bar">
+      <label>连接方式</label>
+      <select id="mode-sel" onchange="onFactorChange()">
+        <option value="氨基">蛋白-氨基-CTA</option>
+        <option value="糖链">蛋白-糖链-CTA</option>
+      </select>
+      <label>偶联蛋白</label><select id="conj-sel" onchange="onFactorChange()"></select>
+      <label>靶细胞</label><select id="cell-sel" onchange="onFactorChange()"></select>
+    </div>
+    <h2>选择糖（设定数量后点击，从 CTA 末端长出）</h2>
+    <div class="controls"><label>数量</label><input type="number" id="add-count" value="1" min="1" max="999" /></div>
+    <div class="palette" id="palette"></div>
+    <div class="controls">
+      <button class="danger" onclick="clearChain()">清空</button>
+      <button class="ghost" onclick="undo()">删除末段</button>
+    </div>
+    <h2>当前糖链（CTA 为起点）</h2>
+    <div id="chain"></div>
+    <h2>模型预测：器官分布比例</h2>
+    <div id="analysis"></div>
+  </div>
+
+  <!-- 方案建议 -->
+  <div class="panel" id="panel-suggest">
+    <h2>按器官分布需求给出方案建议</h2>
+    <div class="sub">输入你期望的器官分布（相对比例即可，不必凑 100），系统在规则库里找分布最接近的方案，反推应选的糖 / 数量 / 连接方式 / 蛋白 / 细胞。</div>
+    <div class="card">
+      <div class="row"><span class="grow"><b>目标器官分布</b></span></div>
+      <div class="organ-grid" id="target-organs" style="margin-top:6px"></div>
+      <div class="controls" style="margin-top:14px">
+        <label>给出前</label>
+        <input type="number" id="sug-topn" value="3" min="1" max="10" style="width:72px" />
+        <label>条建议</label>
+        <button class="primary" onclick="runSuggest()">生成建议</button>
+      </div>
+    </div>
+    <div id="suggest-result"></div>
+  </div>
+
+<script>
+const ORGANS = ["心","肝","脾","肺","肾","脑"];
+const ORGAN_COLORS = { 心:"#f87171", 肝:"#fb923c", 脾:"#a78bfa", 肺:"#5b9dff", 肾:"#34d399", 脑:"#f472b6" };
+const FACTOR_COLORS = ["#5b9dff","#fbbf24","#2dd4bf","#a78bfa","#f87171"];
+
+// ===== 本地存储 =====
+function load(key, def) {
+  try { const v = JSON.parse(localStorage.getItem(key)); return v || def; }
+  catch(e) { return def; }
+}
+const DB = {
+  sugars: load("gc_sugars", [
+    { code: "Glc", name: "葡萄糖", color: "#0072bc" },
+    { code: "Gal", name: "半乳糖", color: "#f9c000" },
+    { code: "Man", name: "甘露糖", color: "#00a651" },
+    { code: "Fuc", name: "岩藻糖", color: "#ed1c24" },
+    { code: "Lac", name: "乳糖",   color: "#a54399" },
+    { code: "Xyl", name: "木糖",   color: "#f78fb3" },
+  ]),
+  proteins: load("gc_proteins2", [
+    { name: "IgG抗体",        glycan: "复杂双天线N-糖链，核心岩藻糖，末端半乳糖/唾液酸" },
+    { name: "转铁蛋白",       glycan: "双天线唾液酸化N-糖链（α2-6 Neu5Ac）" },
+    { name: "促红素(EPO)",    glycan: "高度唾液酸化的N-糖链与O-糖链" },
+    { name: "α1-酸性糖蛋白",  glycan: "高度分支、高唾液酸化N-糖链" },
+    { name: "黏蛋白(Mucin)",  glycan: "密集O-糖链（Tn/T抗原、唾液酸）" },
+    { name: "BSA(牛血清白蛋白)", glycan: "几乎无糖基化，常作偶联载体/对照" },
+  ]),
+  cells: load("gc_cells", [
+    { name: "HeLa(宫颈癌)",   glycan: "高唾液酸化、复杂型N-糖链" },
+    { name: "CHO(仓鼠卵巢)",  glycan: "复杂型N-糖链，α2-3唾液酸为主" },
+    { name: "HEK293(人胚肾)", glycan: "复杂/杂合型N-糖链" },
+    { name: "Jurkat(T细胞)",  glycan: "唾液酸化、聚乳糖胺(polyLacNAc)" },
+    { name: "MCF-7(乳腺癌)",  glycan: "高唾液酸化、Lewis抗原" },
+    { name: "红细胞(RBC)",    glycan: "ABO血型糖链、末端唾液酸" },
+    { name: "巨噬细胞",       glycan: "高甘露糖（甘露糖受体识别）" },
+  ]),
+  weights: load("gc_weights2", null),
+  rules: load("gc_rules4", [
+    { sugar: "Gal", count: 5, mode: "氨基", protein: "无特定蛋白种类", cell: "巨噬细胞",
+      organs: { 心: 5, 肝: 65, 脾: 3.5, 肺: 10, 肾: 11.5, 脑: 5 } },
+  ]),
+};
+function save() {
+  localStorage.setItem("gc_sugars", JSON.stringify(DB.sugars));
+  localStorage.setItem("gc_proteins2", JSON.stringify(DB.proteins));
+  localStorage.setItem("gc_cells", JSON.stringify(DB.cells));
+  localStorage.setItem("gc_weights2", JSON.stringify(DB.weights));
+  localStorage.setItem("gc_rules4", JSON.stringify(DB.rules));
+}
+function sugarMap() { return Object.fromEntries(DB.sugars.map(s => [s.code, s])); }
+function listOf(type) { return type === "protein" ? DB.proteins : DB.cells; }
+
+// ===== SVG 饼图 =====
+function pieChart(data, size) {
+  const total = data.reduce((a, d) => a + d.value, 0) || 1;
+  const r = size / 2, cx = r, cy = r;
+  let ang = -Math.PI / 2, paths = "";
+  data.forEach(d => {
+    const frac = d.value / total;
+    if (frac <= 0) return;
+    if (frac >= 0.9999) { paths += `<circle cx="${cx}" cy="${cy}" r="${r-1}" fill="${d.color}"/>`; return; }
+    const a2 = ang + frac * Math.PI * 2;
+    const x1 = cx + r * Math.cos(ang), y1 = cy + r * Math.sin(ang);
+    const x2 = cx + r * Math.cos(a2), y2 = cy + r * Math.sin(a2);
+    const large = frac > 0.5 ? 1 : 0;
+    paths += `<path d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${large} 1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${d.color}" stroke="#0b0f1a" stroke-width="2"/>`;
+    ang = a2;
+  });
+  // 中心挖空做成环形，更现代
+  paths += `<circle cx="${cx}" cy="${cy}" r="${r*0.5}" fill="#0b0f1a"/>`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${paths}</svg>`;
+}
+function legendHTML(data) {
+  const total = data.reduce((a, d) => a + d.value, 0) || 1;
+  return `<div class="legend">` + data.map(d =>
+    `<div class="li"><span class="sw" style="background:${d.color}"></span>
+      <span>${d.label}</span><span class="lp">${(d.value/total*100).toFixed(1)}%</span></div>`).join("") + `</div>`;
+}
+
+// ===== 标签切换 =====
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("panel-" + tab.dataset.tab).classList.add("active");
+    if (tab.dataset.tab === "suggest") initSuggest();
+  };
+});
+
+// ================= ② 权重分析 =================
+const FACTORS = [
+  { key: "sugarType",  label: "糖种类",   catOf: r => r.sugar },
+  { key: "sugarCount", label: "糖数量",   catOf: r => "b" + Math.round(r.count / 3) },
+  { key: "mode",       label: "连接方式", catOf: r => r.mode },
+  { key: "protein",    label: "蛋白种类", catOf: r => r.protein },
+  { key: "cell",       label: "细胞种类", catOf: r => r.cell },
+];
+function organVec(r) {
+  const s = ORGANS.reduce((a, o) => a + (r.organs[o] || 0), 0) || 1;
+  return ORGANS.map(o => (r.organs[o] || 0) / s);
+}
+function vdist(a, b) { let s = 0; for (let i = 0; i < a.length; i++) s += (a[i] - b[i]) ** 2; return Math.sqrt(s); }
+
+function computeWeights() {
+  const rules = DB.rules;
+  const vecs = rules.map(organVec);
+  const scores = {};
+  FACTORS.forEach(f => {
+    let agS = 0, agN = 0, diS = 0, diN = 0;
+    for (let i = 0; i < rules.length; i++)
+      for (let j = i + 1; j < rules.length; j++) {
+        const d = vdist(vecs[i], vecs[j]);
+        if (f.catOf(rules[i]) === f.catOf(rules[j])) { agS += d; agN++; }
+        else { diS += d; diN++; }
+      }
+    const agree = agN ? agS / agN : 0;
+    const diff = diN ? diS / diN : 0;
+    scores[f.key] = { agree, diff, D: Math.max(diff - agree, 0) };
+  });
+  const Ds = FACTORS.map(f => scores[f.key].D);
+  const max = Math.max(...Ds), min = Math.min(...Ds);
+  const w = {};
+  FACTORS.forEach(f => {
+    w[f.key] = (max === min) ? 5 : Math.round(((scores[f.key].D - min) / (max - min)) * 9 + 1);
+  });
+  return { w, scores };
+}
+
+function runWeightAnalysis() {
+  const box = document.getElementById("weight-result");
+  if (DB.rules.length < 2) {
+    box.innerHTML = '<div class="card empty">规则不足 2 条，无法分析。请先录入更多数据（建议 10 组以上）。</div>';
+    return;
+  }
+  const res = computeWeights();
+  DB.weights = res.w;
+  save();
+
+  let html = `<div class="card"><div class="row"><b>运算规则与计算公式</b></div>
+    <div class="formula">
+    方法：<b>判别力分析（Discriminative Power）</b>。核心思想是——若某因素一旦不同就导致器官分布明显不同，说明该因素对分布的决定作用大，权重应更高。<br>
+    1. 器官分布归一化为比例向量：<code>v = [心,肝,脾,肺,肾,脑] / Σ</code><br>
+    2. 两规则分布差异用欧氏距离：<code>dist(v₁,v₂) = √Σ(v₁ᵢ − v₂ᵢ)²</code><br>
+    3. 对因素 f，把所有规则两两配对，分成"该因素相同"和"该因素不同"两组，各求平均距离：<br>
+    &nbsp;&nbsp;<code>agree(f) = mean dist（f 相同的规则对）</code><br>
+    &nbsp;&nbsp;<code>diff(f) = mean dist（f 不同的规则对）</code><br>
+    4. 判别力：<code>D(f) = max(diff(f) − agree(f), 0)</code><br>
+    5. 五个因素的 D 线性缩放到 1–10 作为权重：<code>W(f) = round( (D(f)−Dmin)/(Dmax−Dmin) × 9 + 1 )</code><br>
+    （糖数量为连续值，先按每 3 个分档再比较。）
+    </div></div>`;
+
+  html += `<div class="card"><div class="row"><b>各因素判别力明细</b>
+    <span class="empty">基于 ${DB.rules.length} 条规则</span></div>`;
+  FACTORS.forEach(f => {
+    const s = res.scores[f.key];
+    html += `<div class="row"><span class="grow">${f.label}</span>
+      <span class="empty" style="font-size:12px">agree=${s.agree.toFixed(3)}　diff=${s.diff.toFixed(3)}　D=${s.D.toFixed(3)}</span>
+      <span class="score">权重 ${res.w[f.key]}</span></div>`;
+  });
+  html += `</div>`;
+
+  const pieData = FACTORS.map((f, i) => ({ label: f.label, value: res.w[f.key], color: FACTOR_COLORS[i] }));
+  html += `<div class="card"><div class="row"><b>权重占比（扇形图）</b></div>
+    <div class="chart-flex" style="margin-top:10px">${pieChart(pieData, 200)}${legendHTML(pieData)}</div></div>`;
+
+  box.innerHTML = html;
+  analyze();
+}
+
+// ================= ③ 模型预测 =================
+let chain = [];
+let conjugate = "", conjMode = "氨基", targetCell = "";
+
+function renderConjSelect() {
+  const ps = document.getElementById("conj-sel");
+  ps.innerHTML = '<option value="">（无特定蛋白）</option>' +
+    DB.proteins.map(p => `<option value="${p.name}">${p.name}</option>`).join("");
+  ps.value = conjugate;
+  const cs = document.getElementById("cell-sel");
+  cs.innerHTML = '<option value="">（无特定细胞）</option>' +
+    DB.cells.map(c => `<option value="${c.name}">${c.name}</option>`).join("");
+  cs.value = targetCell;
+}
+function onFactorChange() {
+  conjMode = document.getElementById("mode-sel").value;
+  conjugate = document.getElementById("conj-sel").value;
+  targetCell = document.getElementById("cell-sel").value;
+  analyze();
+}
+function renderPalette() {
+  const box = document.getElementById("palette");
+  if (DB.sugars.length === 0) { box.innerHTML = '<span class="placeholder">糖库为空，去"糖库"页添加。</span>'; return; }
+  box.innerHTML = DB.sugars.map(s =>
+    `<div class="mono" onclick="addMono('${s.code}')">
+       <span class="shape" style="background:${s.color}"></span>
+       <span>${s.name}<br><small>${s.code}</small></span>
+     </div>`).join("");
+}
+function addMono(code) {
+  const count = Math.max(1, parseInt(document.getElementById("add-count").value) || 1);
+  chain.push({ code, count }); renderChain();
+}
+function undo() { chain.pop(); renderChain(); }
+function clearChain() { chain = []; renderChain(); }
+function removeSeg(i) { chain.splice(i, 1); renderChain(); }
+
+function renderChain() {
+  const box = document.getElementById("chain");
+  const sm = sugarMap();
+  let html = `<span class="seg"><span class="bead cta" title="链转移剂 CTA（糖链起点）">CTA</span></span>`;
+  if (chain.length === 0) {
+    box.innerHTML = html + '<span class="placeholder" style="margin-left:10px">从这里长出糖链，设定数量后点上面的糖。</span>';
+    analyze(); return;
+  }
+  chain.forEach((seg, i) => {
+    const s = sm[seg.code] || { color: "#888", code: seg.code };
+    html += `<span class="link">—</span>`;
+    if (seg.count <= 4) {
+      let beads = "";
+      for (let k = 0; k < seg.count; k++)
+        beads += `<span class="bead" style="background:${s.color}" title="点击删除该段" onclick="removeSeg(${i})">${s.code}</span>`;
+      html += `<span class="seg">${beads}</span>`;
+    } else {
+      html += `<span class="seg"><span class="bead small" style="background:${s.color}"
+                title="点击删除该段" onclick="removeSeg(${i})">${s.code}</span>
+                <span class="xN">×${seg.count}</span></span>`;
+    }
+  });
+  box.innerHTML = html; analyze();
+}
+
+function ruleSimilarity(rule, counts, total) {
+  const w = DB.weights;
+  let ms = 0, maxs = 0;
+  const mSugar = rule.sugar === "任意" ? 1 : ((counts[rule.sugar] || 0) > 0 ? 1 : 0);
+  ms += mSugar * w.sugarType; maxs += w.sugarType;
+  const mCount = 1 - Math.min(Math.abs(total - rule.count) / Math.max(rule.count, 1), 1);
+  ms += mCount * w.sugarCount; maxs += w.sugarCount;
+  const mMode = rule.mode === "任意" ? 1 : (conjMode === rule.mode ? 1 : 0);
+  ms += mMode * w.mode; maxs += w.mode;
+  const mProt = rule.protein === "无特定蛋白种类" ? 1 : (conjugate === rule.protein ? 1 : 0);
+  ms += mProt * w.protein; maxs += w.protein;
+  const mCell = rule.cell === "无特定细胞种类" ? 1 : (targetCell === rule.cell ? 1 : 0);
+  ms += mCell * w.cell; maxs += w.cell;
+  return maxs > 0 ? ms / maxs : 0;
+}
+
+function analyze() {
+  const box = document.getElementById("analysis");
+  if (!DB.weights) {
+    box.innerHTML = '<div class="card empty">还没有分析权重。请先到"② 权重分析"页点"开始分析权重"。</div>';
+    return;
+  }
+  const counts = {}; let total = 0;
+  chain.forEach(seg => { counts[seg.code] = (counts[seg.code] || 0) + seg.count; total += seg.count; });
+  const compStr = Object.entries(counts).map(([c, n]) => `${c}(${n})`).join("  ") || "—";
+  const seq = "CTA" + chain.map(seg => `—${seg.code}` + (seg.count > 1 ? `×${seg.count}` : "")).join("");
+
+  let html = `<div class="card">
+    <div class="row"><span class="badge b-conj">连接</span><span>蛋白-${conjMode}-CTA</span>
+      <span class="badge b-protein" style="margin-left:10px">蛋白</span><span>${conjugate || "无特定"}</span>
+      <span class="badge b-cell" style="margin-left:10px">细胞</span><span>${targetCell || "无特定"}</span></div>
+    <div class="row"><b>组成：</b><span class="mono-code">${compStr}</span></div>
+    <div class="row"><b>序列：</b><span class="mono-code">${seq}</span></div></div>`;
+
+  const scored = DB.rules.map(r => ({ r, sim: ruleSimilarity(r, counts, total) }))
+                         .sort((a, b) => b.sim - a.sim);
+  const blend = {}; ORGANS.forEach(o => blend[o] = 0);
+  let wsum = 0;
+  scored.forEach(s => {
+    const wgt = Math.pow(s.sim, 3);
+    if (wgt <= 0) return;
+    ORGANS.forEach(o => blend[o] += (s.r.organs[o] || 0) * wgt);
+    wsum += wgt;
+  });
+
+  if (wsum === 0) {
+    html += '<div class="card empty">与已有规则相似度过低，无法预测。请补充规则或调整输入。</div>';
+    box.innerHTML = html; return;
+  }
+  ORGANS.forEach(o => blend[o] /= wsum);
+  const sum = ORGANS.reduce((a, o) => a + blend[o], 0) || 1;
+  const pct = {}; ORGANS.forEach(o => pct[o] = blend[o] / sum * 100);
+  const maxv = Math.max(...ORGANS.map(o => pct[o]), 1);
+
+  html += `<div class="card"><div class="row"><b>器官分布（柱状图）</b></div>`;
+  ORGANS.forEach(o => {
+    html += `<div class="bar-wrap">
+      <span class="bar-name">${o}</span>
+      <span class="bar-track"><span class="bar-fill" style="width:${(pct[o]/maxv*100).toFixed(1)}%;background:${ORGAN_COLORS[o]}"></span></span>
+      <span class="bar-val">${pct[o].toFixed(1)}%</span></div>`;
+  });
+  html += `</div>`;
+
+  const pieData = ORGANS.map(o => ({ label: o, value: pct[o], color: ORGAN_COLORS[o] }));
+  html += `<div class="card"><div class="row"><b>器官分布（扇形图）</b></div>
+    <div class="chart-flex" style="margin-top:10px">${pieChart(pieData, 200)}${legendHTML(pieData)}</div>`;
+  const top = scored.slice(0, 3).filter(s => s.sim > 0);
+  html += `<div class="tag-hint" style="margin-top:12px">主要参考规则：` +
+    top.map(s => `${s.r.sugar}/${s.r.count}/${s.r.mode}/${s.r.cell}（相似 ${(s.sim*100).toFixed(0)}%）`).join("；") +
+    `</div></div>`;
+
+  box.innerHTML = html;
+}
+
+// ================= 糖库 =================
+function addSugar() {
+  const name = document.getElementById("sugar-name").value.trim();
+  const code = document.getElementById("sugar-code").value.trim();
+  const color = document.getElementById("sugar-color").value;
+  if (!name || !code) { alert("名称和缩写都要填"); return; }
+  if (DB.sugars.some(s => s.code === code)) { alert("已存在相同缩写的糖"); return; }
+  DB.sugars.push({ code, name, color });
+  document.getElementById("sugar-name").value = "";
+  document.getElementById("sugar-code").value = "";
+  save(); renderSugarList(); renderPalette(); renderRuleForm();
+}
+function delSugar(code) {
+  DB.sugars = DB.sugars.filter(s => s.code !== code);
+  chain = chain.filter(seg => seg.code !== code);
+  save(); renderSugarList(); renderPalette(); renderRuleForm(); renderChain();
+}
+function renderSugarList() {
+  const box = document.getElementById("sugar-list");
+  if (DB.sugars.length === 0) { box.innerHTML = '<div class="card empty">糖库为空，添加一个吧。</div>'; return; }
+  box.innerHTML = '<div class="card">' + DB.sugars.map(s =>
+    `<div class="row"><span class="shape" style="background:${s.color}"></span>
+       <span class="grow"><b>${s.name}</b> <span class="empty">${s.code}</span></span>
+       <button class="del" onclick="delSugar('${s.code}')">删除</button></div>`
+  ).join("") + '</div>';
+}
+
+// ================= 蛋白/细胞库 =================
+function addEntry(type) {
+  const name = document.getElementById(type + "-name").value.trim();
+  const glycan = document.getElementById(type + "-glycan").value.trim();
+  if (!name) return;
+  const arr = listOf(type);
+  if (arr.some(e => e.name === name)) { alert("已存在同名条目"); return; }
+  arr.push({ name, glycan });
+  document.getElementById(type + "-name").value = "";
+  document.getElementById(type + "-glycan").value = "";
+  save(); renderLists(); renderRuleForm(); renderConjSelect();
+}
+function delEntry(type, name) {
+  const arr = listOf(type);
+  const i = arr.findIndex(e => e.name === name);
+  if (i >= 0) arr.splice(i, 1);
+  if (type === "protein" && conjugate === name) conjugate = "";
+  if (type === "cell" && targetCell === name) targetCell = "";
+  save(); renderLists(); renderRuleForm(); renderConjSelect(); analyze();
+}
+function renderLists() {
+  ["protein", "cell"].forEach(type => {
+    const arr = listOf(type);
+    const box = document.getElementById(type + "-list");
+    const cn = type === "protein" ? "蛋白" : "细胞";
+    const bcls = type === "protein" ? "b-protein" : "b-cell";
+    if (arr.length === 0) { box.innerHTML = '<div class="card empty">库为空，添加一个吧。</div>'; return; }
+    box.innerHTML = '<div class="card">' + arr.map(e =>
+      `<div class="row"><span class="badge ${bcls}">${cn}</span>
+       <span class="grow"><b>${e.name}</b>${e.glycan ? '<span class="glyco">表面糖链：' + e.glycan + '</span>' : ''}</span>
+       <button class="del" onclick="delEntry('${type}','${e.name}')">删除</button></div>`
+    ).join("") + '</div>';
+  });
+}
+
+// ================= ① 关联规则 =================
+function renderRuleForm() {
+  document.getElementById("r-sugar").innerHTML =
+    '<option value="任意">任意</option>' +
+    DB.sugars.map(s => `<option value="${s.code}">${s.name} (${s.code})</option>`).join("");
+  document.getElementById("r-protein").innerHTML =
+    '<option value="无特定蛋白种类">无特定蛋白种类</option>' +
+    DB.proteins.map(p => `<option value="${p.name}">${p.name}</option>`).join("");
+  document.getElementById("r-cell").innerHTML =
+    '<option value="无特定细胞种类">无特定细胞种类</option>' +
+    DB.cells.map(c => `<option value="${c.name}">${c.name}</option>`).join("");
+  document.getElementById("r-organs").innerHTML = ORGANS.map((o, i) =>
+    `<span class="og"><span>${o}</span><input type="number" id="ro-${i}" value="0" min="0" step="0.1" /></span>`
+  ).join("");
+}
+function addRule() {
+  const sugar = document.getElementById("r-sugar").value;
+  const count = parseInt(document.getElementById("r-count").value) || 0;
+  const mode = document.getElementById("r-mode").value;
+  const protein = document.getElementById("r-protein").value;
+  const cell = document.getElementById("r-cell").value;
+  const organs = {};
+  ORGANS.forEach((o, i) => organs[o] = parseFloat(document.getElementById("ro-" + i).value) || 0);
+  DB.rules.push({ sugar, count, mode, protein, cell, organs });
+  save(); renderRules();
+}
+function delRule(i) { DB.rules.splice(i, 1); save(); renderRules(); }
+function renderRules() {
+  document.getElementById("rule-count").textContent = DB.rules.length;
+  const box = document.getElementById("rule-list");
+  if (DB.rules.length === 0) { box.innerHTML = '<div class="card empty">还没有规则。</div>'; return; }
+  box.innerHTML = DB.rules.map((r, i) => {
+    const organStr = ORGANS.map(o => `${o}${r.organs[o]}`).join(" ");
+    return `<div class="card">
+      <div class="row"><span class="grow" style="font-size:13px">
+        糖<b>${r.sugar}</b>　量<b>${r.count}</b>　连<b>${r.mode}</b>　蛋白<b>${r.protein}</b>　细胞<b>${r.cell}</b>
+      </span><button class="del" onclick="delRule(${i})">删除</button></div>
+      <div class="row"><span class="empty">器官分布：</span><span class="mono-code">${organStr}</span></div>
+    </div>`;
+  }).join("");
+}
+
+// ===== CSV 导入/导出 =====
+const CSV_HEADER = ["糖种类","糖数量","连接方式","蛋白种类","细胞种类", ...ORGANS];
+function downloadTemplate() {
+  const rows = [
+    CSV_HEADER.join(","),
+    "Gal,5,氨基,无特定蛋白种类,巨噬细胞,5,65,3.5,10,11.5,5",
+    "Man,8,糖链,转铁蛋白,HeLa(宫颈癌),8,20,15,30,12,15",
+    "任意,3,任意,无特定蛋白种类,无特定细胞种类,10,10,10,10,10,10",
+  ];
+  downloadText("关联规则模板.csv", rows.join("\n"));
+}
+function exportCSV() {
+  const lines = [CSV_HEADER.join(",")];
+  DB.rules.forEach(r => {
+    const cells = [r.sugar, r.count, r.mode, r.protein, r.cell, ...ORGANS.map(o => r.organs[o] || 0)];
+    lines.push(cells.map(csvCell).join(","));
+  });
+  downloadText("关联规则导出.csv", lines.join("\n"));
+}
+function csvCell(v) { const s = String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function downloadText(filename, text) {
+  const blob = new Blob(["\ufeff" + text], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+  URL.revokeObjectURL(a.href);
+}
+function parseCSV(text) {
+  const rows = []; let row = [], cell = "", inQ = false;
+  text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) { if (c === '"') { if (text[i+1] === '"') { cell += '"'; i++; } else inQ = false; } else cell += c; }
+    else { if (c === '"') inQ = true; else if (c === ",") { row.push(cell); cell = ""; }
+      else if (c === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; } else cell += c; }
+  }
+  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+function importCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      let text = e.target.result;
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+      const rows = parseCSV(text).filter(r => r.some(c => c.trim() !== ""));
+      if (rows.length < 2) throw new Error("没有数据行");
+      let start = rows[0].join("").includes("糖种类") ? 1 : 0;
+      const parsed = [];
+      const modeMap = { "氨基":"氨基", "糖链":"糖链", "任意":"任意",
+                        "蛋白-氨基-CTA":"氨基", "蛋白-糖链-CTA":"糖链" };
+      for (let i = start; i < rows.length; i++) {
+        const c = rows[i].map(x => x.trim());
+        if (c.length < 11) throw new Error(`第 ${i+1} 行列数不足（需 11 列，实得 ${c.length}）`);
+        const organs = {};
+        ORGANS.forEach((o, k) => organs[o] = parseFloat(c[5 + k]) || 0);
+        parsed.push({
+          sugar: c[0] || "任意",
+          count: parseInt(c[1]) || 0,
+          mode: modeMap[c[2]] || "任意",
+          protein: c[3] || "无特定蛋白种类",
+          cell: c[4] || "无特定细胞种类",
+          organs
+        });
+      }
+      if (document.getElementById("csv-replace").checked) DB.rules = parsed;
+      else DB.rules = DB.rules.concat(parsed);
+      save(); renderRules();
+      showCsvMsg(`导入成功，新增 ${parsed.length} 条，当前共 ${DB.rules.length} 条。`, true);
+    } catch (err) { showCsvMsg("导入失败：" + err.message, false); }
+    input.value = "";
+  };
+  reader.readAsText(file, "UTF-8");
+}
+function showCsvMsg(msg, ok) {
+  document.getElementById("csv-msg").innerHTML =
+    `<div class="row" style="color:${ok ? '#34d399' : '#fca5a5'}">${msg}</div>`;
+}
+
+// ================= 方案建议（反向推荐） =================
+function initSuggest() {
+  const box = document.getElementById("target-organs");
+  if (box.dataset.ready) return;
+  box.innerHTML = ORGANS.map((o, i) =>
+    `<span class="og"><span>${o}</span><input type="number" id="tg-${i}" value="0" min="0" step="0.1" /></span>`
+  ).join("");
+  box.dataset.ready = "1";
+}
+function runSuggest() {
+  const out = document.getElementById("suggest-result");
+  if (DB.rules.length === 0) {
+    out.innerHTML = '<div class="card empty">规则库为空，先到"① 关联规则"录入或导入数据。</div>';
+    return;
+  }
+  const target = {}; let tsum = 0;
+  ORGANS.forEach((o, i) => { target[o] = parseFloat(document.getElementById("tg-" + i).value) || 0; tsum += target[o]; });
+  if (tsum === 0) {
+    out.innerHTML = '<div class="card empty">请先填入目标器官分布（至少一个器官 > 0）。</div>';
+    return;
+  }
+  const tvec = ORGANS.map(o => target[o] / tsum);
+
+  const scored = DB.rules.map(r => {
+    const rv = organVec(r);
+    const sim = 1 - vdist(tvec, rv) / Math.SQRT2;
+    return { r, sim: Math.max(sim, 0) };
+  }).sort((a, b) => b.sim - a.sim);
+
+  const topN = Math.max(1, Math.min(10, parseInt(document.getElementById("sug-topn").value) || 3));
+  const top = scored.slice(0, topN);
+
+  const tPie = ORGANS.map(o => ({ label: o, value: target[o], color: ORGAN_COLORS[o] }));
+  let html = `<div class="card"><div class="row"><b>你的目标分布</b></div>
+    <div class="chart-flex" style="margin-top:10px">${pieChart(tPie, 180)}${legendHTML(tPie)}</div></div>`;
+
+  html += `<div class="card"><div class="row"><b>综合建议</b>
+    <span class="empty">（对最接近的 ${top.length} 个方案加权归纳）</span></div>`;
+  html += suggestConsensus(top);
+  html += `</div>`;
+
+  html += `<div class="card"><div class="row"><b>候选方案（按接近度排序）</b></div>`;
+  top.forEach((s, idx) => {
+    const r = s.r;
+    const rPie = ORGANS.map(o => ({ label: o, value: r.organs[o] || 0, color: ORGAN_COLORS[o] }));
+    html += `<div class="divider">
+      <div class="row" style="border:none;padding-top:0">
+        <span class="badge b-conj">方案 ${idx + 1}</span>
+        <span class="score">接近度 ${(s.sim * 100).toFixed(0)}%</span></div>
+      <div class="row" style="border:none;font-size:13px">
+        糖种类 <b>${sugarLabel(r.sugar)}</b>　糖数量 <b>${r.count}</b>　
+        连接方式 <b>${modeLabel(r.mode)}</b>　蛋白 <b>${r.protein}</b>　细胞 <b>${r.cell}</b></div>
+      <div class="chart-flex" style="margin-top:6px">${pieChart(rPie, 150)}${legendHTML(rPie)}</div>
+    </div>`;
+  });
+  html += `</div>`;
+  out.innerHTML = html;
+}
+function sugarLabel(code) {
+  if (code === "任意") return "任意";
+  const s = DB.sugars.find(x => x.code === code);
+  return s ? `${s.name}(${s.code})` : code;
+}
+function modeLabel(m) {
+  return m === "氨基" ? "蛋白-氨基-CTA" : m === "糖链" ? "蛋白-糖链-CTA" : "任意";
+}
+function suggestConsensus(top) {
+  const fields = [
+    { key: "sugar", label: "推荐糖种类", fmt: sugarLabel },
+    { key: "mode",  label: "推荐连接方式", fmt: modeLabel },
+    { key: "protein", label: "推荐蛋白", fmt: v => v },
+    { key: "cell",  label: "推荐细胞", fmt: v => v },
+  ];
+  let html = "";
+  fields.forEach(f => {
+    const tally = {};
+    top.forEach(s => { const v = s.r[f.key]; tally[v] = (tally[v] || 0) + s.sim; });
+    const ranked = Object.entries(tally).sort((a, b) => b[1] - a[1]);
+    const wsum = ranked.reduce((a, x) => a + x[1], 0) || 1;
+    const best = ranked[0];
+    html += `<div class="row"><span class="grow">${f.label}</span>
+      <span class="hit">${f.fmt(best[0])}</span>
+      <span class="empty" style="font-size:12px">支持度 ${(best[1] / wsum * 100).toFixed(0)}%</span></div>`;
+  });
+  let cw = 0, csum = 0;
+  top.forEach(s => { cw += s.r.count * s.sim; csum += s.sim; });
+  const avgCount = csum ? Math.round(cw / csum) : 0;
+  html += `<div class="row"><span class="grow">推荐糖数量</span>
+    <span class="hit">约 ${avgCount} 个</span>
+    <span class="empty" style="font-size:12px">加权平均</span></div>`;
+  return html;
+}
+
+// ===== 初始化 =====
+renderConjSelect();
+renderPalette();
+renderChain();
+renderSugarList();
+renderLists();
+renderRuleForm();
+renderRules();
+</script>
+</body>
+</html>
