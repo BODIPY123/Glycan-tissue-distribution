@@ -8,7 +8,7 @@
   :root {
     --bg: #0b0f1a; --bg2: #111828; --card: #161f33; --card2: #1c2740;
     --line: #263149; --line2: #303d5a;
-    --text: #e8ecf4; --muted: #8a95ab; --dim: #5a6staple;
+    --text: #e8ecf4; --muted: #8a95ab;
     --dim: #5a677f;
     --accent: #5b9dff; --accent2: #7c5cff;
     --green: #34d399; --gold: #fbbf24; --teal: #2dd4bf; --red: #f87171;
@@ -170,11 +170,38 @@
   .tag-hint { font-size: 12px; color: var(--muted); background: var(--bg);
     padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--line);
     margin-top: 8px; }
+
+  .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .info-card { background: var(--card2); border: 1px solid var(--line2); border-radius: var(--radius-sm); padding: 12px; }
+  .info-card b { color: #dbe4f5; display: block; margin-bottom: 4px; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 600; border: 1px solid var(--line2); background: var(--card2); color: #c7d2e8; }
+  .pill.high { color: #bbf7d0; border-color: rgba(52,211,153,.45); background: rgba(52,211,153,.1); }
+  .pill.mid { color: #fde68a; border-color: rgba(251,191,36,.45); background: rgba(251,191,36,.1); }
+  .pill.low { color: #fecaca; border-color: rgba(248,113,113,.45); background: rgba(248,113,113,.1); }
+  .readme-box { white-space: pre-wrap; font-family: "SF Mono", Consolas, monospace; font-size: 12.5px;
+    background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 14px; color: #dbe4f5;
+    overflow-x: auto; }
+  .footer { margin-top: 24px; color: var(--muted); font-size: 12px; text-align: center; }
+  @media (max-width: 760px) {
+    .info-grid { grid-template-columns: 1fr; }
+    .rule-form { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
   <h1>糖链 · 器官分布关联建模</h1>
-  <div class="lead">流程：① 录入关联规则（可 CSV 批量导入）→ ② 分析各因素权重 → ③ 输入新糖链预测器官分布。「方案建议」页可按目标分布反向推荐配方。数据保存在本地浏览器。</div>
+  <div class="lead">流程：① 录入关联规则（可 CSV 批量导入）→ ② 分析各因素权重 → ③ 输入新糖链进行基于规则的分布预测。「方案建议」页可按目标分布反向推荐配方。数据保存在本地浏览器。</div>
+
+  <div class="card">
+    <div class="row"><span class="grow"><b>项目说明</b></span><span class="pill">静态网页 · 本地存储</span></div>
+    <div class="info-grid">
+      <div class="info-card"><b>用途</b><span class="empty">记录糖链 / 蛋白 / 细胞 / 实验条件与器官分布之间的经验关联。</span></div>
+      <div class="info-card"><b>方法</b><span class="empty">使用规则相似度与判别力权重进行分布估算，不是经过验证的机器学习模型。</span></div>
+      <div class="info-card"><b>数据</b><span class="empty">所有数据只保存在当前浏览器 localStorage，不会上传服务器。</span></div>
+    </div>
+    <div class="tag-hint">建议先导入示例 CSV 熟悉格式；正式使用时请记录时间点、给药方式、模型/样本、检测方式、数据单位和数据来源，避免把不可比较的实验混合计算。</div>
+  </div>
 
   <div class="tabs">
     <div class="tab active" data-tab="rule"><span class="step">①</span>关联规则</div>
@@ -182,14 +209,15 @@
     <div class="tab" data-tab="protein">蛋白库</div>
     <div class="tab" data-tab="cell">细胞库</div>
     <div class="tab" data-tab="weight"><span class="step">②</span>权重分析</div>
-    <div class="tab" data-tab="predict"><span class="step">③</span>模型预测</div>
+    <div class="tab" data-tab="predict"><span class="step">③</span>基于规则的分布预测</div>
     <div class="tab" data-tab="suggest">方案建议</div>
+    <div class="tab" data-tab="readme">项目说明 / README</div>
   </div>
 
   <!-- ① 关联规则 -->
   <div class="panel active" id="panel-rule">
     <h2>录入关联规则（因素组合 → 器官分布）</h2>
-    <div class="sub">每条：糖种类 / 糖数量 / 连接方式 / 蛋白种类 / 细胞种类，及心肝脾肺肾脑数值。因素可选"任意 / 无特定"作通配。建议 10 组以上。</div>
+    <div class="sub">每条规则记录：糖种类 / 糖数量 / 连接方式 / 蛋白种类 / 细胞种类 / 实验条件，及心肝脾肺肾脑数值。因素可选“任意 / 无特定”作通配。建议 20 组以上，并保持时间点、单位、检测方式可比。</div>
     <div class="card">
       <div class="rule-form">
         <label>糖种类</label><select id="r-sugar"></select>
@@ -202,6 +230,30 @@
         </select>
         <label>蛋白种类</label><select id="r-protein"></select>
         <label>细胞种类</label><select id="r-cell"></select>
+        <label>时间点</label><input type="text" id="r-timepoint" value="24h" placeholder="如 1h / 6h / 24h" />
+        <label>给药方式</label>
+        <select id="r-route">
+          <option value="未记录">未记录</option>
+          <option value="静脉注射">静脉注射</option>
+          <option value="腹腔注射">腹腔注射</option>
+          <option value="口服">口服</option>
+          <option value="皮下注射">皮下注射</option>
+          <option value="局部给药">局部给药</option>
+          <option value="体外孵育">体外孵育</option>
+        </select>
+        <label>模型/样本</label><input type="text" id="r-model" placeholder="如 BALB/c 小鼠 / 细胞实验" />
+        <label>检测方式</label><input type="text" id="r-method" value="荧光成像" placeholder="如 荧光成像 / 质谱 / 放射计数" />
+        <label>数据单位</label>
+        <select id="r-unit">
+          <option value="相对比例">相对比例</option>
+          <option value="百分比">百分比</option>
+          <option value="%ID/g">%ID/g</option>
+          <option value="荧光强度">荧光强度</option>
+          <option value="放射计数">放射计数</option>
+          <option value="其他">其他</option>
+        </select>
+        <label>数据来源</label><input type="text" id="r-source" placeholder="文献 DOI / 实验编号 / 记录人" />
+        <label>备注</label><input type="text" id="r-note" placeholder="可选：样本量、异常值、处理说明等" />
         <label>器官分布</label><div class="organ-grid" id="r-organs"></div>
       </div>
       <div style="margin-top:14px"><button class="primary" onclick="addRule()">添加规则</button></div>
@@ -211,14 +263,14 @@
     <div class="card">
       <div class="controls">
         <button class="primary" onclick="downloadTemplate()">下载 CSV 模板</button>
+        <button class="ghost" onclick="downloadExampleCSV()">下载示例 CSV</button>
         <button class="ghost" onclick="document.getElementById('csv-file').click()">导入 CSV</button>
         <input type="file" id="csv-file" accept=".csv,.txt" style="display:none" onchange="importCSV(this)" />
         <button class="ghost" onclick="exportCSV()">导出当前规则</button>
         <label style="margin-left:8px"><input type="checkbox" id="csv-replace" style="width:auto" /> 导入时清空原有规则</label>
       </div>
       <div class="tag-hint">
-        列顺序：糖种类, 糖数量, 连接方式, 蛋白种类, 细胞种类, 心, 肝, 脾, 肺, 肾, 脑。
-        连接方式填 氨基 / 糖链 / 任意。Excel 编辑后「另存为 CSV UTF-8」再导入。
+        列顺序：糖种类, 糖数量, 连接方式, 蛋白种类, 细胞种类, 心, 肝, 脾, 肺, 肾, 脑, 时间点, 给药方式, 模型/样本, 检测方式, 数据单位, 数据来源, 备注。旧版 11 列 CSV 仍可导入，新增字段会自动留空。Excel 编辑后请「另存为 CSV UTF-8」再导入。
       </div>
       <div id="csv-msg"></div>
     </div>
@@ -269,7 +321,7 @@
     <div id="weight-result"></div>
   </div>
 
-  <!-- ③ 模型预测 -->
+  <!-- ③ 基于规则的分布预测 -->
   <div class="panel" id="panel-predict">
     <div class="conj-bar">
       <label>连接方式</label>
@@ -289,7 +341,7 @@
     </div>
     <h2>当前糖链（CTA 为起点）</h2>
     <div id="chain"></div>
-    <h2>模型预测：器官分布比例</h2>
+    <h2>基于规则的分布预测：器官分布比例</h2>
     <div id="analysis"></div>
   </div>
 
@@ -310,10 +362,27 @@
     <div id="suggest-result"></div>
   </div>
 
+
+  <!-- 项目说明 / README -->
+  <div class="panel" id="panel-readme">
+    <h2>项目 README 与发布说明</h2>
+    <div class="sub">可复制到 GitHub 仓库的 README.md。建议仓库 About 中填写描述、Pages 链接和 topics。</div>
+    <div class="card">
+      <div class="controls">
+        <button class="primary" onclick="copyReadme()">复制 README</button>
+        <button class="ghost" onclick="downloadReadme()">下载 README.md</button>
+      </div>
+      <div id="readme-box" class="readme-box"></div>
+    </div>
+  </div>
+
+  <div class="footer">Version 0.2.0 · 基于规则的糖链器官分布关联工具 · 数据仅保存在本地浏览器</div>
+
 <script>
 const ORGANS = ["心","肝","脾","肺","肾","脑"];
 const ORGAN_COLORS = { 心:"#f87171", 肝:"#fb923c", 脾:"#a78bfa", 肺:"#5b9dff", 肾:"#34d399", 脑:"#f472b6" };
 const FACTOR_COLORS = ["#5b9dff","#fbbf24","#2dd4bf","#a78bfa","#f87171"];
+const EXTRA_FIELDS = ["时间点","给药方式","模型/样本","检测方式","数据单位","数据来源","备注"];
 
 // ===== 本地存储 =====
 function load(key, def) {
@@ -349,7 +418,8 @@ const DB = {
   weights: load("gc_weights2", null),
   rules: load("gc_rules4", [
     { sugar: "Gal", count: 5, mode: "氨基", protein: "无特定蛋白种类", cell: "巨噬细胞",
-      organs: { 心: 5, 肝: 65, 脾: 3.5, 肺: 10, 肾: 11.5, 脑: 5 } },
+      organs: { 心: 5, 肝: 65, 脾: 3.5, 肺: 10, 肾: 11.5, 脑: 5 },
+      timepoint: "24h", route: "静脉注射", model: "小鼠", method: "荧光成像", unit: "百分比", source: "示例数据", note: "仅用于演示" },
   ]),
 };
 function save() {
@@ -361,6 +431,131 @@ function save() {
 }
 function sugarMap() { return Object.fromEntries(DB.sugars.map(s => [s.code, s])); }
 function listOf(type) { return type === "protein" ? DB.proteins : DB.cells; }
+
+function normRule(r) {
+  return {
+    sugar: r.sugar || "任意",
+    count: parseInt(r.count) || 0,
+    mode: r.mode || "任意",
+    protein: r.protein || "无特定蛋白种类",
+    cell: r.cell || "无特定细胞种类",
+    organs: r.organs || {},
+    timepoint: r.timepoint || "",
+    route: r.route || "",
+    model: r.model || "",
+    method: r.method || "",
+    unit: r.unit || "",
+    source: r.source || "",
+    note: r.note || ""
+  };
+}
+function normalizeRules() { DB.rules = DB.rules.map(normRule); }
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, m => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[m]));
+}
+function metaText(r) {
+  const m = normRule(r);
+  const items = [
+    ["时间点", m.timepoint],
+    ["给药", m.route],
+    ["模型/样本", m.model],
+    ["检测", m.method],
+    ["单位", m.unit],
+    ["来源", m.source],
+    ["备注", m.note],
+  ].filter(x => x[1]);
+  return items.length ? items.map(([k,v]) => `${k}:${v}`).join("　") : "实验条件未记录";
+}
+function ruleStability(n) {
+  if (n < 5) return { label: "低", cls: "low", text: "规则数过少，仅适合测试页面功能。" };
+  if (n < 20) return { label: "初步", cls: "mid", text: "规则数偏少，权重和预测仅供初步参考。" };
+  if (n < 100) return { label: "中", cls: "mid", text: "规则量达到初步建模规模，但仍建议按时间点、单位、检测方式分组分析。" };
+  return { label: "高", cls: "high", text: "规则量较充足，可进一步分层验证或导出做统计建模。" };
+}
+function predictionConfidence(n, bestSim) {
+  if (n >= 20 && bestSim >= 0.75) return { label: "高", cls: "high", text: "规则量和相似度较好。" };
+  if (n >= 5 && bestSim >= 0.45) return { label: "中", cls: "mid", text: "可作趋势参考，建议增加同条件规则验证。" };
+  return { label: "低", cls: "low", text: "规则量不足或相似度偏低，请谨慎解读。" };
+}
+function readmeText() {
+  return `# 糖链器官分布关联建模
+
+一个纯前端静态网页工具，用于记录糖链、连接方式、偶联蛋白、细胞类型、实验条件与器官分布之间的经验规则，并进行基于规则相似度的分布预测和方案建议。
+
+## 功能
+
+- 关联规则录入与本地保存
+- CSV 模板下载、示例 CSV 下载、CSV 导入和导出
+- 糖库、蛋白库、细胞库维护
+- 因素权重分析
+- 基于规则相似度的器官分布预测
+- 按目标器官分布反向推荐候选方案
+- 预测可信度与规则库稳定性提示
+
+## 数据字段
+
+核心字段：
+
+- 糖种类
+- 糖数量
+- 连接方式
+- 蛋白种类
+- 细胞种类
+- 心、肝、脾、肺、肾、脑分布值
+
+实验条件字段：
+
+- 时间点
+- 给药方式
+- 模型/样本
+- 检测方式
+- 数据单位
+- 数据来源
+- 备注
+
+## 方法说明
+
+本工具使用经验规则匹配和判别力权重分析。它不是经过充分验证的机器学习模型，也不应直接作为动物实验、临床判断或药物开发决策依据。
+
+## 使用方法
+
+1. 打开网页。
+2. 在“关联规则”中手动录入或导入 CSV。
+3. 在“权重分析”中点击“开始分析权重”。
+4. 在“基于规则的分布预测”中输入糖链、连接方式、蛋白和细胞。
+5. 查看预测分布、参考规则和可信度提示。
+6. 在“方案建议”中输入目标器官分布，反向查找相近方案。
+
+## GitHub Pages 发布
+
+1. 将此文件命名为 \`index.html\`。
+2. 上传到 GitHub 仓库根目录。
+3. 进入仓库 Settings → Pages。
+4. Source 选择 Deploy from a branch。
+5. Branch 选择 main，Folder 选择 /(root)。
+6. 保存后等待部署完成。
+
+## 注意
+
+- 数据保存在当前浏览器 localStorage 中，不会上传服务器。
+- 清除浏览器缓存或更换浏览器可能导致本地数据丢失。
+- 建议导出 CSV 作为备份。
+- 不同时间点、单位、给药方式、动物模型或检测方式的数据不宜直接混合比较。
+
+Version 0.2.0`;
+}
+function renderReadme() {
+  const box = document.getElementById("readme-box");
+  if (box) box.textContent = readmeText();
+}
+function copyReadme() {
+  const text = readmeText();
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => alert("README 已复制"));
+  else alert("当前浏览器不支持自动复制，请手动选中复制。");
+}
+function downloadReadme() {
+  downloadText("README.md", readmeText(), "text/markdown;charset=utf-8");
+}
 
 // ===== SVG 饼图 =====
 function pieChart(data, size) {
@@ -448,8 +643,13 @@ function runWeightAnalysis() {
   const res = computeWeights();
   DB.weights = res.w;
   save();
+  const stability = ruleStability(DB.rules.length);
 
-  let html = `<div class="card"><div class="row"><b>运算规则与计算公式</b></div>
+  let html = `<div class="card"><div class="row"><b>规则库稳定性</b>
+    <span class="pill ${stability.cls}">稳定性：${stability.label}</span></div>
+    <div class="tag-hint">当前规则数：${DB.rules.length} 条。${stability.text}</div></div>`;
+
+  html += `<div class="card"><div class="row"><b>运算规则与计算公式</b></div>
     <div class="formula">
     方法：<b>判别力分析（Discriminative Power）</b>。核心思想是——若某因素一旦不同就导致器官分布明显不同，说明该因素对分布的决定作用大，权重应更高。<br>
     1. 器官分布归一化为比例向量：<code>v = [心,肝,脾,肺,肾,脑] / Σ</code><br>
@@ -595,6 +795,13 @@ function analyze() {
   const sum = ORGANS.reduce((a, o) => a + blend[o], 0) || 1;
   const pct = {}; ORGANS.forEach(o => pct[o] = blend[o] / sum * 100);
   const maxv = Math.max(...ORGANS.map(o => pct[o]), 1);
+  const bestSim = scored.length ? scored[0].sim : 0;
+  const conf = predictionConfidence(DB.rules.length, bestSim);
+  const stability = ruleStability(DB.rules.length);
+  html += `<div class="card"><div class="row"><b>预测可信度</b>
+      <span class="pill ${conf.cls}">可信度：${conf.label}</span>
+      <span class="pill ${stability.cls}">规则库：${stability.label}</span></div>
+    <div class="tag-hint">当前规则数：${DB.rules.length} 条；最相似规则：${(bestSim*100).toFixed(0)}%。${conf.text} 该结果为基于规则相似度的估算，不代表经过验证的机器学习预测。</div></div>`;
 
   html += `<div class="card"><div class="row"><b>器官分布（柱状图）</b></div>`;
   ORGANS.forEach(o => {
@@ -610,7 +817,7 @@ function analyze() {
     <div class="chart-flex" style="margin-top:10px">${pieChart(pieData, 200)}${legendHTML(pieData)}</div>`;
   const top = scored.slice(0, 3).filter(s => s.sim > 0);
   html += `<div class="tag-hint" style="margin-top:12px">主要参考规则：` +
-    top.map(s => `${s.r.sugar}/${s.r.count}/${s.r.mode}/${s.r.cell}（相似 ${(s.sim*100).toFixed(0)}%）`).join("；") +
+    top.map(s => `${esc(s.r.sugar)}/${s.r.count}/${esc(s.r.mode)}/${esc(s.r.cell)}（相似 ${(s.sim*100).toFixed(0)}%，${esc(metaText(s.r))}）`).join("；") +
     `</div></div>`;
 
   box.innerHTML = html;
@@ -699,49 +906,73 @@ function addRule() {
   const mode = document.getElementById("r-mode").value;
   const protein = document.getElementById("r-protein").value;
   const cell = document.getElementById("r-cell").value;
+  const timepoint = document.getElementById("r-timepoint").value.trim();
+  const route = document.getElementById("r-route").value;
+  const model = document.getElementById("r-model").value.trim();
+  const method = document.getElementById("r-method").value.trim();
+  const unit = document.getElementById("r-unit").value;
+  const source = document.getElementById("r-source").value.trim();
+  const note = document.getElementById("r-note").value.trim();
   const organs = {};
   ORGANS.forEach((o, i) => organs[o] = parseFloat(document.getElementById("ro-" + i).value) || 0);
-  DB.rules.push({ sugar, count, mode, protein, cell, organs });
+  DB.rules.push(normRule({ sugar, count, mode, protein, cell, organs, timepoint, route, model, method, unit, source, note }));
   save(); renderRules();
 }
 function delRule(i) { DB.rules.splice(i, 1); save(); renderRules(); }
 function renderRules() {
+  normalizeRules();
   document.getElementById("rule-count").textContent = DB.rules.length;
   const box = document.getElementById("rule-list");
   if (DB.rules.length === 0) { box.innerHTML = '<div class="card empty">还没有规则。</div>'; return; }
-  box.innerHTML = DB.rules.map((r, i) => {
-    const organStr = ORGANS.map(o => `${o}${r.organs[o]}`).join(" ");
+  const stability = ruleStability(DB.rules.length);
+  box.innerHTML = `<div class="card"><div class="row"><b>规则库状态</b>
+    <span class="pill ${stability.cls}">稳定性：${stability.label}</span></div>
+    <div class="tag-hint">当前规则数：${DB.rules.length} 条。${stability.text}</div></div>` +
+    DB.rules.map((raw, i) => {
+    const r = normRule(raw);
+    const organStr = ORGANS.map(o => `${o}${r.organs[o] || 0}`).join(" ");
     return `<div class="card">
       <div class="row"><span class="grow" style="font-size:13px">
-        糖<b>${r.sugar}</b>　量<b>${r.count}</b>　连<b>${r.mode}</b>　蛋白<b>${r.protein}</b>　细胞<b>${r.cell}</b>
+        糖<b>${esc(r.sugar)}</b>　量<b>${r.count}</b>　连<b>${esc(r.mode)}</b>　蛋白<b>${esc(r.protein)}</b>　细胞<b>${esc(r.cell)}</b>
       </span><button class="del" onclick="delRule(${i})">删除</button></div>
-      <div class="row"><span class="empty">器官分布：</span><span class="mono-code">${organStr}</span></div>
+      <div class="row"><span class="empty">实验条件：</span><span class="mono-code">${esc(metaText(r))}</span></div>
+      <div class="row"><span class="empty">器官分布：</span><span class="mono-code">${esc(organStr)}</span></div>
     </div>`;
   }).join("");
 }
 
 // ===== CSV 导入/导出 =====
-const CSV_HEADER = ["糖种类","糖数量","连接方式","蛋白种类","细胞种类", ...ORGANS];
+const CSV_HEADER = ["糖种类","糖数量","连接方式","蛋白种类","细胞种类", ...ORGANS, ...EXTRA_FIELDS];
 function downloadTemplate() {
   const rows = [
     CSV_HEADER.join(","),
-    "Gal,5,氨基,无特定蛋白种类,巨噬细胞,5,65,3.5,10,11.5,5",
-    "Man,8,糖链,转铁蛋白,HeLa(宫颈癌),8,20,15,30,12,15",
-    "任意,3,任意,无特定蛋白种类,无特定细胞种类,10,10,10,10,10,10",
+    "Gal,5,氨基,无特定蛋白种类,巨噬细胞,5,65,3.5,10,11.5,5,24h,静脉注射,BALB/c小鼠,荧光成像,百分比,文献或实验编号,示例行可删除",
   ];
   downloadText("关联规则模板.csv", rows.join("\n"));
 }
+function downloadExampleCSV() {
+  const rows = [
+    CSV_HEADER.join(","),
+    "Gal,5,氨基,无特定蛋白种类,巨噬细胞,5,65,3.5,10,11.5,5,24h,静脉注射,BALB/c小鼠,荧光成像,百分比,Example-001,肝分布示例",
+    "Man,8,糖链,转铁蛋白,HeLa(宫颈癌),8,20,15,30,12,15,6h,体外孵育,HeLa细胞,荧光强度,相对比例,Example-002,肺分布示例",
+    "Fuc,3,氨基,IgG抗体,CHO(仓鼠卵巢),12,25,28,12,18,5,24h,静脉注射,小鼠,放射计数,%ID/g,Example-003,脾分布示例",
+    "任意,3,任意,无特定蛋白种类,无特定细胞种类,10,10,10,10,10,10,24h,未记录,未记录,未记录,相对比例,Example-004,均匀分布对照"
+  ];
+  downloadText("示例规则数据.csv", rows.join("\n"));
+}
 function exportCSV() {
   const lines = [CSV_HEADER.join(",")];
-  DB.rules.forEach(r => {
-    const cells = [r.sugar, r.count, r.mode, r.protein, r.cell, ...ORGANS.map(o => r.organs[o] || 0)];
+  DB.rules.forEach(raw => {
+    const r = normRule(raw);
+    const cells = [r.sugar, r.count, r.mode, r.protein, r.cell, ...ORGANS.map(o => r.organs[o] || 0),
+      r.timepoint, r.route, r.model, r.method, r.unit, r.source, r.note];
     lines.push(cells.map(csvCell).join(","));
   });
   downloadText("关联规则导出.csv", lines.join("\n"));
 }
 function csvCell(v) { const s = String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
-function downloadText(filename, text) {
-  const blob = new Blob(["\ufeff" + text], { type: "text/csv;charset=utf-8" });
+function downloadText(filename, text, type = "text/csv;charset=utf-8") {
+  const blob = new Blob(["\ufeff" + text], { type });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob); a.download = filename; a.click();
   URL.revokeObjectURL(a.href);
@@ -777,14 +1008,21 @@ function importCSV(input) {
         if (c.length < 11) throw new Error(`第 ${i+1} 行列数不足（需 11 列，实得 ${c.length}）`);
         const organs = {};
         ORGANS.forEach((o, k) => organs[o] = parseFloat(c[5 + k]) || 0);
-        parsed.push({
+        parsed.push(normRule({
           sugar: c[0] || "任意",
           count: parseInt(c[1]) || 0,
           mode: modeMap[c[2]] || "任意",
           protein: c[3] || "无特定蛋白种类",
           cell: c[4] || "无特定细胞种类",
-          organs
-        });
+          organs,
+          timepoint: c[11] || "",
+          route: c[12] || "",
+          model: c[13] || "",
+          method: c[14] || "",
+          unit: c[15] || "",
+          source: c[16] || "",
+          note: c[17] || ""
+        }));
       }
       if (document.getElementById("csv-replace").checked) DB.rules = parsed;
       else DB.rules = DB.rules.concat(parsed);
@@ -831,10 +1069,14 @@ function runSuggest() {
 
   const topN = Math.max(1, Math.min(10, parseInt(document.getElementById("sug-topn").value) || 3));
   const top = scored.slice(0, topN);
+  const bestSuggest = top.length ? top[0].sim : 0;
+  const conf = predictionConfidence(DB.rules.length, bestSuggest);
 
   const tPie = ORGANS.map(o => ({ label: o, value: target[o], color: ORGAN_COLORS[o] }));
-  let html = `<div class="card"><div class="row"><b>你的目标分布</b></div>
-    <div class="chart-flex" style="margin-top:10px">${pieChart(tPie, 180)}${legendHTML(tPie)}</div></div>`;
+  let html = `<div class="card"><div class="row"><b>你的目标分布</b>
+      <span class="pill ${conf.cls}">建议可信度：${conf.label}</span></div>
+    <div class="chart-flex" style="margin-top:10px">${pieChart(tPie, 180)}${legendHTML(tPie)}</div>
+    <div class="tag-hint">当前规则数：${DB.rules.length} 条；最接近方案：${(bestSuggest*100).toFixed(0)}%。${conf.text}</div></div>`;
 
   html += `<div class="card"><div class="row"><b>综合建议</b>
     <span class="empty">（对最接近的 ${top.length} 个方案加权归纳）</span></div>`;
@@ -851,7 +1093,8 @@ function runSuggest() {
         <span class="score">接近度 ${(s.sim * 100).toFixed(0)}%</span></div>
       <div class="row" style="border:none;font-size:13px">
         糖种类 <b>${sugarLabel(r.sugar)}</b>　糖数量 <b>${r.count}</b>　
-        连接方式 <b>${modeLabel(r.mode)}</b>　蛋白 <b>${r.protein}</b>　细胞 <b>${r.cell}</b></div>
+        连接方式 <b>${modeLabel(r.mode)}</b>　蛋白 <b>${esc(r.protein)}</b>　细胞 <b>${esc(r.cell)}</b></div>
+      <div class="tag-hint">${esc(metaText(r))}</div>
       <div class="chart-flex" style="margin-top:6px">${pieChart(rPie, 150)}${legendHTML(rPie)}</div>
     </div>`;
   });
@@ -894,6 +1137,8 @@ function suggestConsensus(top) {
 }
 
 // ===== 初始化 =====
+normalizeRules();
+renderReadme();
 renderConjSelect();
 renderPalette();
 renderChain();
